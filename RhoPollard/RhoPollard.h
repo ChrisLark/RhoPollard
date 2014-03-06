@@ -16,9 +16,17 @@ public:
 class Scalar : public RhoPollard{
 public:
 	std::bitset<m> val;
-	Scalar SCALMUL(Scalar a, Scalar b);
-	Scalar SCALADD(Scalar a, Scalar b);
-	Scalar SCALSQ(Scalar a);
+	Scalar SCALMUL(Scalar b);
+	Scalar SCALADD(Scalar b);
+	Scalar SCALSQ();
+	Scalar SCALPOWn(int n);
+	Scalar SCALINV();
+	Scalar& operator=(Scalar const &a){
+		this->val = a.val;
+		return *this;
+	}
+	Scalar(){};
+	Scalar(std::string hexval);
 };
 
 class Point : public RhoPollard{
@@ -28,31 +36,83 @@ public:
 	Point ECCMUL(Scalar k, Point P);
 	Point ECCADD(Point P, Point Q);
 	Point ECCDOUB(Point P);
+	Point& operator=(Point const &a){
+		this->x.val = a.x.val;
+		this->y.val = a.y.val;
+		return *this;
+	};
 	Point(){};
 	Point(std::string hexval_x, std::string hexval_y);
 };
 
 
 
-Scalar Scalar::SCALMUL(Scalar a, Scalar b){  //NIST multiplication
+Scalar Scalar::SCALMUL(Scalar b){  //NIST multiplication
 	Scalar c;
 	for (int i = 0; i <= m - 1; i++){
-		for (int n = 1; n <= p - 2; n++) c.val[i] = c.val[i] ^ a.val[F[n + 1]] | b.val[F[p - n]];
-		a.val = a.val << 1;
+		for (int n = 1; n <= p - 2; n++) c.val[i] = c.val[i] ^ this->val[F[n + 1]] | b.val[F[p - n]];
+		this->val = this->val << 1;
 		b.val = b.val << 1;
 	}
 	return c;
 }
 
-Scalar SCALADD(Scalar a, Scalar b){
+//Scalar Scalar::SCALMUL(Scalar b){ 
+//	Scalar c;
+//	Scalar U, V;
+//	bool temp;
+//	U = *this;
+//	V = b;
+//	for (int k = 0; k <= m - 1; k++){
+//		for (int i = 1; i <= p - 2; i++) temp ^= U.val[F[i + 1]] | V.val[F[i]];
+//		c.val[k] = temp;
+//		U.val = U.val << 1;
+//		V.val = V.val << 1;
+//	}
+//	return c;
+//}
+
+Scalar Scalar::SCALADD(Scalar b){
 	Scalar c;
-	c.val = a.val ^ b.val;
+	c.val = this->val ^ b.val;
 	return c;
 }
 
-Scalar SCALSQ(Scalar a){
-	a.val = (a.val >> 1) | (a.val << (a.val.size() - 1));
-	return a;
+Scalar Scalar::SCALSQ(){
+	this->val = (this->val >> 1) | (this->val << (this->val.size() - 1));
+	return *this;
+}
+
+Scalar Scalar::SCALPOWn(int n){
+	this->val = (this->val >> n) | (this->val << (this->val.size() - n));
+	return *this;
+}
+
+//Scalar Scalar::SCALINV(){
+//	Scalar b = "1";
+//	*this = this->SCALSQ();
+//	int x = (m - 1) / 2;
+//
+//	while (x != 0){
+//
+//		std::cout << "-----------while-----" << std::endl;
+//		*this = this->SCALMUL(this->SCALPOWn(x));
+//
+//		std::cout << "this:" << this->val << std::endl;
+//		std::cout << "b:" << b.val << std::endl;
+//		if (x % 2 == 0)	x = x / 2;
+//		else{
+//			b = b.SCALMUL(*this);
+//			std::cout << "b aa:" << b.val << std::endl;
+//			*this = this->SCALSQ();
+//			x = (x - 1) / 2;
+//		}
+//	}
+//	return b;
+//}
+
+Scalar Scalar::SCALINV(){
+
 }
 
 Point Point::ECCMUL(Scalar k, Point P){
@@ -74,7 +134,15 @@ Point Point::ECCMUL(Scalar k, Point P){
 
 Point Point::ECCADD(Point P, Point Q){
 	Point S;
-
+	Scalar lambda, temp1, temp2;
+	if (P.x.val == 0 && P.y.val == 0) S = Q;
+	if (Q.x.val == 0 && Q.y.val == 0) S = P;
+	if (P.x.val != Q.x.val){ 
+		temp1.val = P.y.val & ~Q.y.val;
+	//	temp1 = Scalar::SCALINV(temp1);
+		temp2.val = P.y.val & ~Q.y.val;
+		//lambda = Scalar::SCALMUL(); 
+	}
 	return S;
 }
 
@@ -113,6 +181,10 @@ RhoPollard::RhoPollard(){
 }
 
 Point::Point(std::string hexval_x, std::string hexval_y){
-	x.val = std::bitset<m>(hexval_x);
-	y.val = std::bitset<m>(hexval_y);
+	this->x.val = std::bitset<m>(hexval_x);
+	this->y.val = std::bitset<m>(hexval_y);
+}
+
+Scalar::Scalar(std::string hexval){
+	this->val = std::bitset<m>(hexval);
 }

@@ -7,10 +7,11 @@
 class RhoPollard{
 public:
 	RhoPollard();
-	static const int m = 4;
-	static const int T = 3;
+	static const int m = 163;
+	static const int T = 4;
 	static const int p = T * m + 1;
 	int F[p];
+	int wij[p];
 };
 
 class Scalar : public RhoPollard{
@@ -49,6 +50,9 @@ public:
 
 Scalar Scalar::SCALMUL(Scalar b){  //NIST multiplication
 	Scalar c;
+	std::cout << "c: " << c.val << std::endl;
+
+	std::cout << "F: " << c.F[3] << std::endl;
 	for (int i = 0; i <= m - 1; i++){
 		for (int n = 1; n <= p - 2; n++) c.val[i] = c.val[i] ^ this->val[F[n + 1]] | b.val[F[p - n]];
 		this->val = this->val << 1;
@@ -88,31 +92,26 @@ Scalar Scalar::SCALPOWn(int n){
 	return *this;
 }
 
-//Scalar Scalar::SCALINV(){
-//	Scalar b = "1";
-//	*this = this->SCALSQ();
-//	int x = (m - 1) / 2;
-//
-//	while (x != 0){
-//
-//		std::cout << "-----------while-----" << std::endl;
-//		*this = this->SCALMUL(this->SCALPOWn(x));
-//
-//		std::cout << "this:" << this->val << std::endl;
-//		std::cout << "b:" << b.val << std::endl;
-//		if (x % 2 == 0)	x = x / 2;
-//		else{
-//			b = b.SCALMUL(*this);
-//			std::cout << "b aa:" << b.val << std::endl;
-//			*this = this->SCALSQ();
-//			x = (x - 1) / 2;
-//		}
-//	}
-//	return b;
-//}
-
 Scalar Scalar::SCALINV(){
+	Scalar b = "1";
 
+	*this = this->SCALSQ();
+	int x = (m - 1) / 2;
+
+	while (x != 0){
+		std::cout << "-----" << std::endl;
+		std::cout << this->val << std::endl;
+		*this = this->SCALMUL(this->SCALPOWn(x));
+		std::cout << this->val << std::endl;
+		std::cout << "-----" << std::endl;
+		if (x % 2 == 0)	x = x / 2;
+		else{
+			b = b.SCALMUL(*this);
+			*this = this->SCALSQ();
+			x = (x - 1) / 2;
+		}
+	}
+	return b;
 }
 
 Point Point::ECCMUL(Scalar k, Point P){
@@ -177,7 +176,11 @@ RhoPollard::RhoPollard(){
 		}
 		w = (u * w) % p;
 	}
-	for (int z = 1; z < p; z++);
+	for (int z = 1; z <= p; z++);
+		//std::cout << "F[" << z << "]: " << F[z] << std::endl;
+	//for (int i = 1; i <= m - 1; i++){
+		
+	//}
 }
 
 Point::Point(std::string hexval_x, std::string hexval_y){

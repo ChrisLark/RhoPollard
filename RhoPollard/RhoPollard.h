@@ -1,4 +1,5 @@
 #include <bitset>
+#include <vector>
 #include <iostream>
 #include <math.h>
 #include <time.h>
@@ -7,11 +8,11 @@
 class RhoPollard{
 public:
 	RhoPollard();
-	static const int m = 163;
-	static const int T = 4;
+	static const int m = 5;  //163-4 //5 - 2
+	static const int T = 2;
 	static const int p = T * m + 1;
 	int F[p];
-	int wij[p];
+	int dF[p];
 };
 
 class Scalar : public RhoPollard{
@@ -48,33 +49,31 @@ public:
 
 
 
-Scalar Scalar::SCALMUL(Scalar b){  //NIST multiplication
-	Scalar c;
-	std::cout << "c: " << c.val << std::endl;
-
-	std::cout << "F: " << c.F[3] << std::endl;
-	for (int i = 0; i <= m - 1; i++){
-		for (int n = 1; n <= p - 2; n++) c.val[i] = c.val[i] ^ this->val[F[n + 1]] | b.val[F[p - n]];
-		this->val = this->val << 1;
-		b.val = b.val << 1;
-	}
-	return c;
-}
-
-//Scalar Scalar::SCALMUL(Scalar b){ 
+//Scalar Scalar::SCALMUL(Scalar b){  //NIST multiplication
 //	Scalar c;
-//	Scalar U, V;
-//	bool temp;
-//	U = *this;
-//	V = b;
-//	for (int k = 0; k <= m - 1; k++){
-//		for (int i = 1; i <= p - 2; i++) temp ^= U.val[F[i + 1]] | V.val[F[i]];
-//		c.val[k] = temp;
-//		U.val = U.val << 1;
-//		V.val = V.val << 1;
+//	std::cout << "c: " << c.val << std::endl;
+//
+////	std::cout << "F: " << c.F[3] << std::endl;
+//	for (int i = 0; i <= m - 1; i++){
+//		for (int n = 1; n <= p - 2; n++) c.val[i] = c.val[i] ^ this->val[F[n + 1]] | b.val[F[p - n]];
+//		this->val = this->val << 1;
+//		b.val = b.val << 1;
 //	}
 //	return c;
 //}
+
+Scalar Scalar::SCALMUL(Scalar b){ 
+	Scalar Sa = *this;
+	Scalar Sb = b;
+	Scalar C,R;
+	for (int n = 1; n <= p - 2; n++){
+		Sa.val = (Sa.val << dF[n]) | (Sa.val >> (Sa.val.size() - dF[n]));
+		R.val = Sa.val & Sb.val;
+		C.val = C.val ^ R.val;
+		Sb.val = (Sb.val << dF[n]) | (Sb.val >> (Sb.val.size() - dF[n]));
+		}
+	return C;
+}
 
 Scalar Scalar::SCALADD(Scalar b){
 	Scalar c;
@@ -94,16 +93,10 @@ Scalar Scalar::SCALPOWn(int n){
 
 Scalar Scalar::SCALINV(){
 	Scalar b = "1";
-
 	*this = this->SCALSQ();
 	int x = (m - 1) / 2;
-
 	while (x != 0){
-		std::cout << "-----" << std::endl;
-		std::cout << this->val << std::endl;
 		*this = this->SCALMUL(this->SCALPOWn(x));
-		std::cout << this->val << std::endl;
-		std::cout << "-----" << std::endl;
 		if (x % 2 == 0)	x = x / 2;
 		else{
 			b = b.SCALMUL(*this);
@@ -136,11 +129,11 @@ Point Point::ECCADD(Point P, Point Q){
 	Scalar lambda, temp1, temp2;
 	if (P.x.val == 0 && P.y.val == 0) S = Q;
 	if (Q.x.val == 0 && Q.y.val == 0) S = P;
-	if (P.x.val != Q.x.val){ 
+	if (P.x.val != Q.x.val){
 		temp1.val = P.y.val & ~Q.y.val;
-	//	temp1 = Scalar::SCALINV(temp1);
+		temp1 = temp1.SCALINV();
 		temp2.val = P.y.val & ~Q.y.val;
-		//lambda = Scalar::SCALMUL(); 
+		lambda = temp2.SCALMUL(temp1); 
 	}
 	return S;
 }
@@ -153,17 +146,22 @@ Point Point::ECCDOUB(Point P){
 RhoPollard::RhoPollard(){
 	int n, g, b, j, u;
 	srand(time(NULL));
+	for (int i = 0; i < p; i++) F[i] = 0;
 	while (true){
-		g = rand() % p + 1;
-		b = g;
-		j = 1;
-		while (true){
-			b = (g * b) % p;
-			j = j + 1;
-			if (!(b>1)) break;
-		}
-		if (j%T == 0){
-			u = (int)pow((double)g, double(j / T)) % p;
+		g = rand() % (p-1) + 2;
+		//b = g;
+		//j = 1;
+		//while (true){
+		//	b = (g * b) % p;
+		//	j = j + 1;
+		//	if (!(b>1)) break;
+		//}
+		//if (j%T == 0){
+		//	u = (int)pow((double)g, double(j / T)) % p;
+		//	break;
+		//}
+		if ((int)pow((double)g, double(T)) % p == 1){
+			u = g;
 			break;
 		}
 	}
@@ -177,8 +175,12 @@ RhoPollard::RhoPollard(){
 		w = (u * w) % p;
 	}
 	for (int z = 1; z <= p; z++);
-		//std::cout << "F[" << z << "]: " << F[z] << std::endl;
-	//for (int i = 1; i <= m - 1; i++){
+	for (int n = 1; n <= p - 2; n++) dF[n] = ((F[n + 1] - F[n] % m)+m)%m;  //bo liczby ujemne :<
+
+	//for (int z = 1; z <= p - 1; z++)
+	//	std::cout << "F[" << z << "]: " << F[z] << std::endl;
+	//for (int z = 1; z <= p - 1; z++)
+	//	std::cout << "dF[" << z << "]: " << dF[z] << std::endl;
 		
 	//}
 }
